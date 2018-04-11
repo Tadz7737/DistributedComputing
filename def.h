@@ -1,0 +1,4 @@
+#define JEDINUMBER 10
+#define POSTNUMBERS 5
+#define LAZARET 6
+#define TELEPORTTIME 2
