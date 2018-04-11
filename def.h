@@ -1,4 +1,8 @@
-#define JEDINUMBER 10
+#define JEDINUMBER 5
 #define POSTNUMBERS 5
-#define LAZARET 6
+#define LAZARETNUMBER 6
 #define TELEPORTTIME 2
+#define MSG_HELLO 100
+#define MSG_SIZE 3
+#define MSG_REQUEST 44
+#define MSG_YES 99
