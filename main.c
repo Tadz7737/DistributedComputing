@@ -1,9 +1,19 @@
 #include "mpi.h"
 #include "def.h"
 #include <stdio.h>
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
+#include <stdlib.h>
 
 void criticalSection(int x){
+    int seed;
+    time_t tt;
+    seed = time(&tt);
+    srand(seed);
     printf("%d: I am in critical section!\n",x);
+    sleep(rand()%HEALINGTIME)+1);
+    printf("%d: I am leaving critical section!\n",x);
 }
 int main( int argc, char **argv )
 {
@@ -18,6 +28,10 @@ int main( int argc, char **argv )
 
     //TODO
     //Implementation of logical clock
+    //Local section
+    //Critical section in teleporter
+    //Wounds generator
+    //
 
     //sending MSG_REQUEST
     for(receiver=0;receiver<JEDINUMBER;receiver+=1){
@@ -33,7 +47,7 @@ int main( int argc, char **argv )
 
     //determine first process to enter critical section
     //main loop
-    while(receivedCounter!=(JEDINUMBER-1)){
+    while(receivedCounter!=(JEDINUMBER-LAZARETSPACE)){
 		MPI_Recv(msg, MSG_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 		MPI_Get_count( &status, MPI_INT, &size);
 		printf("I %d: Received %d values: (rank: %d message: %d) from %d\n", rank, size, msg[0], msg[2], status.MPI_SOURCE);
@@ -54,7 +68,7 @@ int main( int argc, char **argv )
         }
     }
 
-    if(receivedCounter==JEDINUMBER-1) 
+    if(receivedCounter==JEDINUMBER-LAZARETSPACE) 
         criticalSection(rank);   //enter critical section
     //send approval after leaving the critical section
     for(it=0;it<JEDINUMBER;it+=1){
