@@ -6,7 +6,7 @@
 #define MAXDAMAGE 50
 #define HEALINGTIME 5 //in second
 #define MSG_HELLO 100
-#define MSG_SIZE 4
+#define MSG_SIZE 5
 #define MSG_REQUEST 44
 #define MSG_YES 99
 
