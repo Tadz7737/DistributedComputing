@@ -8,20 +8,14 @@
 #include <string.h>
 
 
-//how to run program
+//how to compile program
 //mpicc main.c -o main
-//mpiexec -np <JEDINUMBER> ./main
+//how to run program
+//mpiexec -np <JEDI_NUMBER> ./main
 //mpirun -n 4 main
 
-/*
-msg[0] = rank;
-msg[2] = MSG_REQUEST;
-msg[3] = moment;
-msg[4] = hp;
-MPI_Comm_size( MPI_COMM_WORLD, &size );
-msg[1] = size;
-*/
-// definicja typu zlozonego message
+
+//definicja typu zlozonego message
 typedef struct message {
     int sender;
     int size;
@@ -31,6 +25,7 @@ typedef struct message {
     struct message *next;
 } message_t;
 
+//dodawanie do listy
 void addToList(message_t **head, int sender, int size, int type, int moment, int hp) {
     message_t * new_node;
     new_node = malloc(sizeof(message_t));
@@ -43,6 +38,7 @@ void addToList(message_t **head, int sender, int size, int type, int moment, int
     *head = new_node;
 }
 
+//usuwanie z listy wg indeksu
 void removeByIndex(message_t **head, int n) {
     int i = 0;
     message_t *current = *head;
@@ -63,7 +59,7 @@ void removeByIndex(message_t **head, int n) {
     }
 }
 
-// wypisz liste
+//wypiywanie listy
 void printList(message_t **head) {
     message_t * current = *head;
     while (current != NULL) {
@@ -72,7 +68,7 @@ void printList(message_t **head) {
     }
 }
  
-// wybor elementu wg indeksu
+//wybor elementu wg indeksu
 message_t * getByIndex(message_t **head, int n) {
     int i = 0;
     message_t * current = *head;
@@ -84,30 +80,37 @@ message_t * getByIndex(message_t **head, int n) {
     return current;
 }
 
+//losowanie wartosci z przedzialu <left;right>
 int randomValue(int left, int right){
-    //losuje wartosc z przedzialu <left;right>
     return (rand() % (right + 1 - left) + left);
 }
+
+//przypisywanie do posterunku
 int assignToPost(){
-    return randomValue(1,POSTNUMBER); //z przedzialu <1;POSTNUMBER>
+    return randomValue(1,POST_NUMBER); //z przedzialu <1;POST_NUMBER>
 }
+
+//generowanie obrazen
 int receiveDamage(){
-    return randomValue(1,MAXDAMAGE);
+    return randomValue(1,MAX_DAMAGE);
 }
+
+//walka, sekcja lokalna
 void fight(int *hp){
-    sleep(5); //co 3 sekundy sprawdza czy oberwal
+    sleep(5); //spowolnienie programu o 5 sek
     int chances = randomValue(1,10);
     if(chances<=5){
         *hp = *hp - receiveDamage();
     }
 }
 
+//sekcja krytyczna
 int criticalSection(int x, int *hp, int *postID, int *moment){
     int time;
     printf("%d: entering critical section!\n",x);
-    time = randomValue(1,HEALINGTIME);
-    sleep(time*4);  //proces jest zatrzymywany na czas leczenia 4 sek * moment
-    *hp = MAXHP;    //atrybut zdrowie jest maksymalizowany
+    time = randomValue(MIN_HEAL_TIME,MAX_HEAL_TIME);
+    sleep(time);    //proces jest zatrzymywany na czas leczenia 
+    *hp = MAX_HP;    //atrybut zdrowie jest maksymalizowany
     *postID = assignToPost();   //przypisanie nowego stanowiska
     *moment = *moment +time;
     printf("%d: leaving critical section!\n",x);
@@ -119,50 +122,50 @@ int main( int argc, char **argv )
     int seed;
     time_t tt;
 
-	int rank,size,receiver,it,receivedCounter,requester, moment, elementCount, skipReceiveing;
+	int rank,size,receiver,it,receivedCounter,requester, moment, elementCount, i, skipReceiving;
     int hp, postID;
   
-    //TODO przydzial do losowego posterunku
 	int msg[MSG_SIZE];
 	MPI_Status status;
-    int priorities[JEDINUMBER];
-    int healthpoints[JEDINUMBER];
+    int priorities[JEDI_NUMBER];
+    int healthpoints[JEDI_NUMBER];
 	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-
 
     message_t *head = NULL;
     seed = time(&tt)+rank;
     srand(seed);
     receivedCounter = 0;
     elementCount = 0;
-    hp = MAXHP;
+    hp = MAX_HP;
     postID = assignToPost();
     printf("%d: receieved post %d\n",rank,postID);
     
-    //TODO
-   //Critical section in teleporter
-    //czas leczenia musi byc logiczny
-    //czas teleportacji musi byc logiczny
-    //przy wyjsciu z sekcji krytycznej wysyla komunikaty z kolejnymi momentami od wejscia do wyjscia np. <7,9>
-    //DONE
-    //Implementation of logical clock DONE
-    //bufor na przyszle wiadomosci -> lista jednokierunkowa DONE
-    //Local section DONE
-    //przesylanie hp w wiadomosciach DONE
-    //priorytet na podstawie zdrowia i ranka (im mniejsze zdrowie tym wiekszy priorytet, potem rank) DONE
-    //Wounds generator DONE
-    //healingtime losowy DONE
+    /* 
+    *TODO
+    -czas teleportacji musi byc logiczny
+    *DONE
+    -Implementation of logical clock DONE
+    -bufor na przyszle wiadomosci -> lista jednokierunkowa DONE
+    -Local section DONE
+    -przesylanie hp w wiadomosciach DONE
+    -priorytet na podstawie zdrowia i ranka (im mniejsze zdrowie tym wiekszy priorytet, potem rank) DONE
+    -Wounds generator DONE
+    -healingtime losowy DONE
+    -czas leczenia musi byc logiczny DONE
+    -przy wyjsciu z sekcji krytycznej wysyla komunikaty z kolejnymi momentami od wejscia do wyjscia np. <7,9> DONE
+    */
 
-    //sending MSG_REQUEST to everyone
     moment = 0;
     while(1){
-        fight(&hp);
-        if(hp<MAXHP){
-            printf("%d: I've been hit, hp: %d, moment: %d!\n",rank, hp, moment);
-            for(receiver=0;receiver<JEDINUMBER;receiver+=1){
-                if(receiver==rank)
+        fight(&hp); //sekcja lokalna
+        /* jezeli  jedi zostal ranny to wypisuje rank, hp i moment oraz wysyla do wszystkich
+           pozostalych rycerzy zadanie dostepu do sekcji krytycznej */
+        if(hp<MAX_HP){
+            printf("%d: I've been hit, hp: %d, moment: %d!\n",rank, hp, moment); 
+            for(receiver=0;receiver<JEDI_NUMBER;receiver+=1){ 
+                if(receiver==rank)                           
                     continue;
                 msg[0] = rank;
                 msg[2] = MSG_REQUEST;
@@ -174,14 +177,26 @@ int main( int argc, char **argv )
                 MPI_Send( msg, MSG_SIZE, MPI_INT,receiver/*receiver*/, MSG_HELLO, MPI_COMM_WORLD );
             }
         
-
-        //determine first process to enter critical section
-        //main loop
-            while(receivedCounter<(JEDINUMBER-LAZARETSPACE)){
-                //sprawdzanie bufora (cala lista)
+    
+            /* ustalanie pierszenstwa w dostepie do sekcji krytycznej
+            tak dlugo jak nie dostal pozwolenia na wejscie od
+            liczby rycerzy pomniejszonej o miejsca w lazarecie czeka na pozwolenie  */
+            while(receivedCounter<(JEDI_NUMBER-LAZARET_SPACE)){
+                /* sprawdzanie bufora wiadomosci odlozonych na pozniej:
+                   -jezeli napotka na starsze wiadomosci niz jego aktualny moment, to je usuwa
+                    (usuwa je poniewaz, wysylal wczesniej potwierdzenie dla wszystkich, wiec sa
+                    nieaktualne)
+                   -jezeli napotka na wiadomosc z biezacego momentu to:
+                     a)jezeli wiadomosc jest zgoda to zwieksza licznik odebranych zgod
+                       i usuwa wiadomosc z listy                      
+                     b)jezeli wiadomosc jest zadaniem to oznacza wiadomosc jako biezaca, 
+                       usuwa ja z listy, ustawia zmienna skipReceiving na 1
+                       (w celu pominiecia odbierania wiadomosci)
+                       i przechodzi do uzgadniania pierszenstwa wejscia
+                   -jezeli napotka na wiadomosc z przyszlosci, to zostawia ja w buforze
+                */          
                 if(head == NULL){ }
                 else {
-                    int i;
                     message_t *tmp;
                     for(i=0;i<elementCount;i=i+1){
                         tmp = getByIndex(&head, i);
@@ -198,7 +213,7 @@ int main( int argc, char **argv )
                                 elementCount = elementCount - 1;
                             }
                             if(tmp->type == MSG_REQUEST){
-                                skipReceiveing = 1;
+                                skipReceiving = 1;
                                 msg[0] = tmp->sender;
                                 msg[2] = tmp->type;
                                 msg[3] = tmp->moment;
@@ -208,16 +223,25 @@ int main( int argc, char **argv )
                         //jezeli natrafi na wiadomosc z przyszlosci to zostawia
                     }
                 }
-                //jeszcze raz sprawdz warunek petli
-                if(receivedCounter>=(JEDINUMBER-LAZARETSPACE)){
+                //jeszcze raz sprawdzony zostaje warunek petli ze wzgledu na przejrzane wiadomosci w buforze
+                if(receivedCounter>=(JEDI_NUMBER-LAZARET_SPACE)){
                     break;
-                }              
-                if(skipReceiveing==0){
+                }      
+
+                /* odbieranie wiadomosci, 
+                   jezeli ze wzgledu na przejscie w buforze
+                   zostala ustawiona zmienna skipReceiving, to pomijamy odbieranie,
+                   w przeciwnym wypadku odbieramy wiadomosci,
+                   jezeli odebrana wiadomosc pochodzi z przeszlosci to ja ignorujemy,
+                   jezeli odebrana wiadomosc pochodzi z biezacego momentu to przechodzimy do ustalania priorytetow
+                   jezeli odebrana wiadomosc pochodzi z przyszlosci to zapisujemy ja do bufora,
+                */        
+                if(skipReceiving==0){
                     do{
                         MPI_Recv(msg, MSG_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);                
                         MPI_Get_count( &status, MPI_INT, &size);
                         printf("<in queue> %d: Received %d values: (rank: %d message: %d moment: %d) from %d\n", rank, size, msg[0], msg[2], msg[3], status.MPI_SOURCE);
-                        //sprawdzanie momentu
+                        //sprawdzanie momentu wyslania wiadomosci
                         if(msg[3]<moment){ //wiadomosci z przeszlosci sa ignorowane
                             printf("Ignore message\n");
                         }
@@ -228,11 +252,18 @@ int main( int argc, char **argv )
                         }
                     }while(msg[3]!=moment);
                 }
-                skipReceiveing=0;
-                
+                else
+                    skipReceiving=0;
+
                 requester = msg[0];
                 priorities[requester] = requester;
                 healthpoints[requester] = msg[4];
+
+                /* -jezeli odebrana wiadomosc jest zadaniem, nastepuje ustalenie pierszenstwa wejscia 
+                    do lazaretu przez porownanie zdrowia rycerzy, a jezeli bylby taki sam, to przez
+                    zmienna rank (przybycie rycerza na pole bitwy)
+                   -jezeli odebrana wiadomosc jest zgoda, to nastepuje zwiekszenie licznika zgod
+                    (zmienna receivedCounter) */                 
                 if(msg[2] == MSG_REQUEST){ //if entry to critical section is requested
                     if(healthpoints[requester]<hp){ //check who is more wounded
                         msg[0] = rank;
@@ -263,12 +294,18 @@ int main( int argc, char **argv )
                 }
              }
         
-
-        if(receivedCounter==JEDINUMBER-LAZARETSPACE) {
+        /*jezeli liczba odebranych zgod jest wystarczajaca do wejscia do sekcji krytycznej  
+          nastepuje wejscie do sekcji krytycznej
+          spedzamy tam czas (zmienna moment zostaje zwiekszona o wartosc z przedzialu
+          <MIN_HEAL_TIME;MAX_HEAL_TIME>
+          do wszystkich jedi wyslana zostaje zgoda na wejscie
+          w zajetych wczesniej momemntach oprocz momentu wyjscia
+        */
+        if(receivedCounter==JEDI_NUMBER-LAZARET_SPACE) {
             int momentsPassed, ite;
             momentsPassed = criticalSection(rank, &hp, &postID, &moment); //enter critical section
             for(ite=moment-momentsPassed;ite<momentsPassed+moment;ite=ite+1){
-                for(it=0;it<JEDINUMBER;it+=1){
+                for(it=0;it<JEDI_NUMBER;it+=1){
                     if(it==rank)
                         continue;            
                     msg[0] = rank;    
@@ -284,10 +321,9 @@ int main( int argc, char **argv )
 
             printf("%d: received post %d\n",rank,postID);
         }
-        sleep(8);  
-        //send approval after leaving the critical section
         }
-        for(it=0;it<JEDINUMBER;it+=1){
+        //do kazdego rycerza zostaje wyslana zgoda na wejscie
+        for(it=0;it<JEDI_NUMBER;it+=1){
             if(it==rank)
                 continue;            
 
@@ -300,7 +336,9 @@ int main( int argc, char **argv )
             printf("%d: Sent approval to %d, moment: %d\n", rank, it, moment);
             MPI_Send( msg, MSG_SIZE, MPI_INT,it/*receiver*/, MSG_HELLO, MPI_COMM_WORLD );
         }
+        //nastepuje inkrementacja momentu
         moment = moment + 1;
+        sleep(1); //spowolnienie procesu na 1s(1 moment)
     }
 
 	MPI_Finalize();
