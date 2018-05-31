@@ -337,8 +337,8 @@ int main( int argc, char **argv )
             MPI_Send( msg, MSG_SIZE, MPI_INT,it/*receiver*/, MSG_HELLO, MPI_COMM_WORLD );
         }
         //nastepuje inkrementacja momentu
-        moment = moment + 1;
-        sleep(1); //spowolnienie procesu na 1s(1 moment)
+        moment = moment + FIGHT_TIME;
+        sleep(FIGHT_TIME); //spowolnienie procesu na 1s(1 moment)
     }
 
 	MPI_Finalize();

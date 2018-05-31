@@ -1,7 +1,8 @@
 #define JEDI_NUMBER 6
 #define POST_NUMBER 4
 #define LAZARET_SPACE 1
-#define TELEPORT_TIME 2
+#define TELEPORT_TIME 1
+#define FIGHT_TIME 1
 #define MAX_HP 100
 #define MAX_DAMAGE 50
 #define MSG_HELLO 100
